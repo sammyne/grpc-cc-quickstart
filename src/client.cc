@@ -19,15 +19,19 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "grpcpp/grpcpp.h"
 #include "grpcpp/security/tls_credentials_options.h"
 #include "helloworld.grpc.pb.h"
+#include "xiangminli/os.h"
 #include "xiangminli/tls.h"
 
 using std::cout;
 using std::endl;
 using std::shared_ptr;
+using std::string;
+using std::vector;
 
 using grpc::Channel;
 using grpc::ChannelCredentials;
@@ -38,8 +42,10 @@ using helloworld::HelloReply;
 using helloworld::HelloRequest;
 
 namespace tls = xiangminli::tls;
+namespace os = xiangminli::os;
+namespace experimental = grpc::experimental;
 
-shared_ptr<ChannelCredentials> newCredentials(const char* key_path,
+shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
                                               const char* cert_path);
 
 class GreeterClient {
@@ -79,42 +85,27 @@ class GreeterClient {
 };
 
 int main(int argc, char** argv) {
-  // Instantiate the client. It requires a channel, out of which the actual RPCs
-  // are created. This channel models a connection to an endpoint specified by
-  // the argument "--target=" which is the only expected argument.
-  // We indicate that the channel isn't authenticated (use of
-  // InsecureChannelCredentials()).
-  std::string target_str;
-  std::string arg_str("--target");
-  if (argc > 1) {
-    std::string arg_val = argv[1];
-    size_t start_pos = arg_val.find(arg_str);
-    if (start_pos != std::string::npos) {
-      start_pos += arg_str.size();
-      if (arg_val[start_pos] == '=') {
-        target_str = arg_val.substr(start_pos + 1);
-      } else {
-        std::cout << "The only correct argument syntax is --target="
-                  << std::endl;
-        return 0;
-      }
-    } else {
-      std::cout << "The only acceptable argument is --target=" << std::endl;
-      return 0;
-    }
-  } else {
-    // target_str = "localhost:50051";
-    target_str = "0.0.0.0:50051";
+  if (argc < 3) {
+    cout << "[usage] key-pem-path cert-pem-path [remote-addr]" << endl;
+    return -1;
   }
 
-  auto credentials = newCredentials(nullptr, nullptr);
+  const auto key_path = argv[1];
+  const auto cert_path = argv[2];
+
+  string remote_addr = "0.0.0.0:50051";
+  if (argc > 3) {
+    remote_addr = string(argv[3]);
+  }
+
+  auto credentials = NewCredentials(key_path, cert_path);
 
   // auto channel = grpc::CreateChannel(target_str, credentials);
 
   grpc::ChannelArguments channel_args;
   // channel_args.SetSslTargetNameOverride("localhost2");
   auto channel =
-      grpc::CreateCustomChannel(target_str, credentials, channel_args);
+      grpc::CreateCustomChannel(remote_addr, credentials, channel_args);
 
   GreeterClient greeter(channel);
   std::string user("world");
@@ -124,7 +115,7 @@ int main(int argc, char** argv) {
   return 0;
 }
 
-shared_ptr<ChannelCredentials> newCredentials(const char* key_path,
+shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
                                               const char* cert_path) {
   grpc::experimental::TlsChannelCredentialsOptions opts;
   opts.set_check_call_host(false);
@@ -133,6 +124,34 @@ shared_ptr<ChannelCredentials> newCredentials(const char* key_path,
   auto cert_verifier = tls::NewEnclaveCertVerifier(true);
 
   opts.set_certificate_verifier(cert_verifier);
+
+  {
+    string key_pem;
+    auto err = os::ReadFile(key_pem, key_path);
+    assert((0 == err) && "fail to read key");
+
+    cout << "key PEM" << endl;
+    cout << key_pem << endl;
+
+    string cert_pem = "";
+    err = os::ReadFile(cert_pem, cert_path);
+    assert((0 == err) && "fail to read cert");
+
+    cout << "cert PEM" << endl;
+    cout << cert_pem << endl;
+
+    experimental::IdentityKeyCertPair key_cert_pair;
+    key_cert_pair.private_key = key_pem;
+    key_cert_pair.certificate_chain = cert_pem;
+
+    vector<experimental::IdentityKeyCertPair> key_cert_pairs{key_cert_pair};
+
+    auto cert_provider =
+        std::make_shared<experimental::StaticDataCertificateProvider>(
+            key_cert_pairs);
+
+    opts.set_certificate_provider(cert_provider);
+  }
 
   return grpc::experimental::TlsCredentials(opts);
 }
