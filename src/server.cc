@@ -31,6 +31,7 @@
 #include "grpcpp/security/tls_credentials_options.h"
 #include "helloworld.grpc.pb.h"
 #include "xiangminli/os.h"
+#include "xiangminli/tls.h"
 
 using std::cout;
 using std::endl;
@@ -48,6 +49,7 @@ using helloworld::HelloReply;
 using helloworld::HelloRequest;
 
 namespace os = xiangminli::os;
+namespace tls = xiangminli::tls;
 namespace experimental = grpc::experimental;
 
 shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
@@ -71,7 +73,11 @@ int main(int argc, char **argv) {
   auto key_path = argv[1];
   auto cert_path = argv[2];
 
-  std::string server_address("0.0.0.0:50051");
+  string listening_addr = "0.0.0.0:50051";
+  if (argc > 3) {
+    listening_addr = string(argv[3]);
+  }
+
   GreeterServiceImpl service;
 
   grpc::EnableDefaultHealthCheckService(true);
@@ -81,14 +87,14 @@ int main(int argc, char **argv) {
   auto credentials = NewCredentials(key_path, cert_path);
 
   // Listen on the given address without any authentication mechanism.
-  builder.AddListeningPort(server_address, credentials);
+  builder.AddListeningPort(listening_addr, credentials);
   // Register "service" as the instance through which we'll communicate with
   // clients. In this case it corresponds to an *synchronous* service.
   builder.RegisterService(&service);
   // Register "service" as the instance through which we'll communicate with
   // Finally assemble the server.
   std::unique_ptr<Server> server(builder.BuildAndStart());
-  std::cout << "Server listening on " << server_address << std::endl;
+  std::cout << "Server listening on " << listening_addr << std::endl;
 
   // Wait for the server to shutdown. Note that some other thread must be
   // responsible for shutting down the server for this call to ever return.
@@ -136,10 +142,17 @@ shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
 
   auto cert_provider =
       std::make_shared<experimental::StaticDataCertificateProvider>(
-          "", key_cert_pairs);
+          key_cert_pairs);
   experimental::TlsServerCredentialsOptions opts(cert_provider);
   // opts.set_check_call_host(false);
   opts.watch_identity_key_cert_pairs();  // magic line to avoid segfault
+
+  opts.set_cert_request_type(
+      grpc_ssl_client_certificate_request_type::
+          GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY);
+
+  auto cert_verifier = tls::NewEnclaveCertVerifier(false);
+  opts.set_certificate_verifier(cert_verifier);
 
   return experimental::TlsServerCredentials(opts);
 }

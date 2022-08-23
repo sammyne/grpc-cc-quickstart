@@ -3,15 +3,17 @@
 set -e
 
 # ref: https://stackoverflow.com/a/10176685/10878967
-openssl req -x509                   \
-  -newkey ec                        \
+openssl req                         \
+  -batch                            \
+  -days 366                         \
   -keyout key.pem                   \
+  -newkey ec                        \
   -nodes                            \
   -out cert.pem                     \
-  -sha256                           \
-  -days 366                         \
   -pkeyopt ec_paramgen_curve:P-256  \
-  -subj "/CN=client"
+  -sha256                           \
+  -subj "/CN=client"                \
+  -x509
 
 echo ""
 echo "key goes as"

@@ -19,14 +19,15 @@ EnclaveCertVerifier::~EnclaveCertVerifier() {}
 bool EnclaveCertVerifier::Verify(TlsCustomVerificationCheckRequest *request,
                                  std::function<void(grpc::Status)> callback,
                                  grpc::Status *sync_status) {
-  if (this->for_debug_) {
-    return true;
-  }
-
   printf("hello from xml\n");
   cout << "peer cert PEM" << endl;
   cout << request->peer_cert() << endl;
   cout << "target name = " << request->target_name() << endl;
+
+  if (this->for_debug_) {
+    printf("pass through any server cert for debug mode\n");
+    return true;
+  }
 
   Status status(StatusCode::UNAUTHENTICATED, "bad cert");
 

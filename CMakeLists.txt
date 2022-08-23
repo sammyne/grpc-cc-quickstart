@@ -29,6 +29,7 @@ add_executable(client ${client_srcs} ${pb_srcs})
 set(server_srcs 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/server.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/os.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/tls.cc
 )
 
 add_executable(server ${server_srcs} ${pb_srcs})

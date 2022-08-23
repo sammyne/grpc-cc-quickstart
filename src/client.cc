@@ -100,12 +100,12 @@ int main(int argc, char** argv) {
 
   auto credentials = NewCredentials(key_path, cert_path);
 
-  // auto channel = grpc::CreateChannel(target_str, credentials);
+  auto channel = grpc::CreateChannel(remote_addr, credentials);
 
-  grpc::ChannelArguments channel_args;
+  // grpc::ChannelArguments channel_args;
   // channel_args.SetSslTargetNameOverride("localhost2");
-  auto channel =
-      grpc::CreateCustomChannel(remote_addr, credentials, channel_args);
+  // auto channel =
+  //    grpc::CreateCustomChannel(remote_addr, credentials, channel_args);
 
   GreeterClient greeter(channel);
   std::string user("world");
@@ -117,29 +117,25 @@ int main(int argc, char** argv) {
 
 shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
                                               const char* cert_path) {
+  string key_pem;
+  auto err = os::ReadFile(key_pem, key_path);
+  assert((0 == err) && "fail to read key");
+
+  cout << "key PEM" << endl;
+  cout << key_pem << endl;
+
+  string cert_pem = "";
+  err = os::ReadFile(cert_pem, cert_path);
+  assert((0 == err) && "fail to read cert");
+
+  cout << "cert PEM" << endl;
+  cout << cert_pem << endl;
+
   grpc::experimental::TlsChannelCredentialsOptions opts;
   opts.set_check_call_host(false);
   opts.set_verify_server_certs(false);
 
-  auto cert_verifier = tls::NewEnclaveCertVerifier(true);
-
-  opts.set_certificate_verifier(cert_verifier);
-
   {
-    string key_pem;
-    auto err = os::ReadFile(key_pem, key_path);
-    assert((0 == err) && "fail to read key");
-
-    cout << "key PEM" << endl;
-    cout << key_pem << endl;
-
-    string cert_pem = "";
-    err = os::ReadFile(cert_pem, cert_path);
-    assert((0 == err) && "fail to read cert");
-
-    cout << "cert PEM" << endl;
-    cout << cert_pem << endl;
-
     experimental::IdentityKeyCertPair key_cert_pair;
     key_cert_pair.private_key = key_pem;
     key_cert_pair.certificate_chain = cert_pem;
@@ -148,10 +144,20 @@ shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
 
     auto cert_provider =
         std::make_shared<experimental::StaticDataCertificateProvider>(
-            key_cert_pairs);
+            cert_pem, key_cert_pairs);
 
     opts.set_certificate_provider(cert_provider);
   }
+  // opts.watch_root_certs();
+
+  auto cert_verifier = tls::NewEnclaveCertVerifier(true);
+  opts.set_certificate_verifier(cert_verifier);
 
   return grpc::experimental::TlsCredentials(opts);
+
+  // grpc::SslCredentialsOptions opts;
+  // opts.pem_private_key = key_pem;
+  // opts.pem_cert_chain = cert_pem;
+
+  // return grpc::SslCredentials(opts);
 }
