@@ -138,7 +138,8 @@ shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
       std::make_shared<experimental::StaticDataCertificateProvider>(
           "", key_cert_pairs);
   experimental::TlsServerCredentialsOptions opts(cert_provider);
-  opts.set_check_call_host(false);
+  // opts.set_check_call_host(false);
+  opts.watch_identity_key_cert_pairs();  // magic line to avoid segfault
 
   return experimental::TlsServerCredentials(opts);
 }

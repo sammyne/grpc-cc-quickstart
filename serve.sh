@@ -9,7 +9,7 @@ cmake -B build
 
 cmake --build build --target server
 
-export GRPC_VERBOSITY=DEBUG
-export GRPC_TRACE=api,call_errors
+#export GRPC_VERBOSITY=DEBUG
+#export GRPC_TRACE=api,call_error
 
 ./build/server $pki_dir/key.pem $pki_dir/cert.pem
