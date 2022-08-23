@@ -14,6 +14,11 @@ curve=P-256
 
 # -nodes: omits the password or passphrase so you can examine the certificate.
 #   It's a really bad idea to omit the password or passphrase.
+#
+# subjectAltName is treated as multiple Common Name
+#
+#subject_opt="-subj '/CN=localhost'"
+subject_opt=""
 $app req                            \
   -batch                            \
   -days 366                         \
@@ -23,7 +28,9 @@ $app req                            \
   -out $cert                        \
   -pkeyopt ec_paramgen_curve:$curve \
   -$md                              \
-  -x509
+  -x509                             \
+  $subject_opt                      \
+  -addext "subjectAltName=DNS:localhost"
 
 echo ""
 echo "-------------------"

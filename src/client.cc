@@ -20,20 +20,27 @@
 #include <memory>
 #include <string>
 
-#include <grpcpp/grpcpp.h>
-
-#ifdef BAZEL_BUILD
-#include "examples/protos/helloworld.grpc.pb.h"
-#else
+#include "grpcpp/grpcpp.h"
+#include "grpcpp/security/tls_credentials_options.h"
 #include "helloworld.grpc.pb.h"
-#endif
+#include "xiangminli/tls.h"
+
+using std::cout;
+using std::endl;
+using std::shared_ptr;
 
 using grpc::Channel;
+using grpc::ChannelCredentials;
 using grpc::ClientContext;
 using grpc::Status;
 using helloworld::Greeter;
 using helloworld::HelloReply;
 using helloworld::HelloRequest;
+
+namespace tls = xiangminli::tls;
+
+shared_ptr<ChannelCredentials> newCredentials(const char* key_path,
+                                              const char* cert_path);
 
 class GreeterClient {
  public:
@@ -96,13 +103,36 @@ int main(int argc, char** argv) {
       return 0;
     }
   } else {
-    target_str = "localhost:50051";
+    // target_str = "localhost:50051";
+    target_str = "0.0.0.0:50051";
   }
-  GreeterClient greeter(
-      grpc::CreateChannel(target_str, grpc::InsecureChannelCredentials()));
+
+  auto credentials = newCredentials(nullptr, nullptr);
+
+  // auto channel = grpc::CreateChannel(target_str, credentials);
+
+  grpc::ChannelArguments channel_args;
+  // channel_args.SetSslTargetNameOverride("localhost2");
+  auto channel =
+      grpc::CreateCustomChannel(target_str, credentials, channel_args);
+
+  GreeterClient greeter(channel);
   std::string user("world");
   std::string reply = greeter.SayHello(user);
   std::cout << "Greeter received: " << reply << std::endl;
 
   return 0;
+}
+
+shared_ptr<ChannelCredentials> newCredentials(const char* key_path,
+                                              const char* cert_path) {
+  grpc::experimental::TlsChannelCredentialsOptions opts;
+  opts.set_check_call_host(false);
+  opts.set_verify_server_certs(false);
+
+  auto cert_verifier = tls::NewEnclaveCertVerifier(true);
+
+  opts.set_certificate_verifier(cert_verifier);
+
+  return grpc::experimental::TlsCredentials(opts);
 }

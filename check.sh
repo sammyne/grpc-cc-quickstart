@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 workdir=$PWD
 pki_dir=$workdir/pki/client
 

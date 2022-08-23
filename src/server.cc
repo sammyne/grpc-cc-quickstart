@@ -20,15 +20,23 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include "grpc/grpc_security.h"
 #include "grpcpp/ext/proto_server_reflection_plugin.h"
 #include "grpcpp/grpcpp.h"
 #include "grpcpp/health_check_service_interface.h"
 #include "grpcpp/security/credentials.h"
+#include "grpcpp/security/tls_certificate_provider.h"
 #include "grpcpp/security/tls_credentials_options.h"
 #include "helloworld.grpc.pb.h"
 #include "xiangminli/os.h"
+
+using std::cout;
+using std::endl;
+using std::shared_ptr;
+using std::string;
+using std::vector;
 
 using grpc::Server;
 using grpc::ServerBuilder;
@@ -39,12 +47,8 @@ using helloworld::Greeter;
 using helloworld::HelloReply;
 using helloworld::HelloRequest;
 
-using std::cout;
-using std::endl;
-using std::shared_ptr;
-using std::string;
-
 namespace os = xiangminli::os;
+namespace experimental = grpc::experimental;
 
 shared_ptr<ServerCredentials> newCredentials(const char *key_path,
                                              const char *cert_path);
@@ -109,12 +113,30 @@ shared_ptr<ServerCredentials> newCredentials(const char *key_path,
   cout << "cert PEM" << endl;
   cout << cert_pem << endl;
 
+  // v1
   grpc::SslServerCredentialsOptions::PemKeyCertPair key_cert{key_pem, cert_pem};
 
-  grpc::SslServerCredentialsOptions opts(
-      GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY);
+  grpc::SslServerCredentialsOptions opts;
+  // grpc::SslServerCredentialsOptions opts(
+  //     GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY);
 
   opts.pem_key_cert_pairs.push_back(key_cert);
 
   return grpc::SslServerCredentials(opts);
+
+  /*
+    experimental::IdentityKeyCertPair key_cert_pair;
+    key_cert_pair.private_key = key_pem;
+    key_cert_pair.certificate_chain = cert_pem;
+
+    vector<experimental::IdentityKeyCertPair> key_cert_pairs{key_cert_pair};
+
+    auto cert_provider =
+        std::make_shared<experimental::StaticDataCertificateProvider>(
+            key_cert_pairs);
+    experimental::TlsServerCredentialsOptions opts(cert_provider);
+    opts.set_check_call_host(false);
+
+    return experimental::TlsServerCredentials(opts);
+    */
 }

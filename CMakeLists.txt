@@ -21,6 +21,7 @@ link_libraries(
 set(client_srcs 
   ${CMAKE_CURRENT_SOURCE_DIR}/src/client.cc
   ${CMAKE_CURRENT_SOURCE_DIR}/src/os.cc
+  ${CMAKE_CURRENT_SOURCE_DIR}/src/tls.cc
 )
 
 add_executable(client ${client_srcs} ${pb_srcs})
