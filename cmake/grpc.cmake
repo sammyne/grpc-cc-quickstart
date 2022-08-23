@@ -11,6 +11,12 @@ message(STATUS "Using protobuf ${Protobuf_VERSION}")
 set(_PROTOBUF_LIBPROTOBUF protobuf::libprotobuf)
 set(_REFLECTION gRPC::grpc++_reflection)
 
+# absl is required by grpc
+find_package(absl CONFIG REQUIRED
+  PATHS /grpc/lib/cmake/absl
+  NO_DEFAULT_PATH
+)
+
 # Find gRPC installation
 # Looks for gRPCConfig.cmake file installed by gRPC's cmake installation.
 find_package(gRPC CONFIG REQUIRED

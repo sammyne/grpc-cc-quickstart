@@ -16,43 +16,68 @@
  *
  */
 
+#include <cassert>
 #include <iostream>
 #include <memory>
 #include <string>
 
-#include <grpcpp/ext/proto_server_reflection_plugin.h>
-#include <grpcpp/grpcpp.h>
-#include <grpcpp/health_check_service_interface.h>
-
+#include "grpc/grpc_security.h"
+#include "grpcpp/ext/proto_server_reflection_plugin.h"
+#include "grpcpp/grpcpp.h"
+#include "grpcpp/health_check_service_interface.h"
+#include "grpcpp/security/credentials.h"
+#include "grpcpp/security/tls_credentials_options.h"
 #include "helloworld.grpc.pb.h"
+#include "xiangminli/os.h"
 
 using grpc::Server;
 using grpc::ServerBuilder;
 using grpc::ServerContext;
+using grpc::ServerCredentials;
 using grpc::Status;
 using helloworld::Greeter;
 using helloworld::HelloReply;
 using helloworld::HelloRequest;
 
+using std::cout;
+using std::endl;
+using std::shared_ptr;
+using std::string;
+
+namespace os = xiangminli::os;
+
+shared_ptr<ServerCredentials> newCredentials(const char *key_path,
+                                             const char *cert_path);
+
 // Logic and data behind the server's behavior.
 class GreeterServiceImpl final : public Greeter::Service {
-  Status SayHello(ServerContext* context, const HelloRequest* request,
-                  HelloReply* reply) override {
+  Status SayHello(ServerContext *context, const HelloRequest *request,
+                  HelloReply *reply) override {
     std::string prefix("Hello ");
     reply->set_message(prefix + request->name());
     return Status::OK;
   }
 };
 
-void RunServer() {
+int main(int argc, char **argv) {
+  if (argc < 3) {
+    cout << "missing key-path and cert-path" << endl;
+    return -1;
+  }
+  auto key_path = argv[1];
+  auto cert_path = argv[2];
+
   std::string server_address("0.0.0.0:50051");
   GreeterServiceImpl service;
 
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
   ServerBuilder builder;
+
+  auto credentials = newCredentials(key_path, cert_path);
+
   // Listen on the given address without any authentication mechanism.
-  builder.AddListeningPort(server_address, grpc::InsecureServerCredentials());
+  builder.AddListeningPort(server_address, credentials);
   // Register "service" as the instance through which we'll communicate with
   // clients. In this case it corresponds to an *synchronous* service.
   builder.RegisterService(&service);
@@ -63,10 +88,33 @@ void RunServer() {
   // Wait for the server to shutdown. Note that some other thread must be
   // responsible for shutting down the server for this call to ever return.
   server->Wait();
-}
-
-int main(int argc, char** argv) {
-  RunServer();
 
   return 0;
+}
+
+shared_ptr<ServerCredentials> newCredentials(const char *key_path,
+                                             const char *cert_path) {
+  string key_pem = "";
+
+  auto err = os::ReadFile(key_pem, key_path);
+  assert((0 == err) && "fail to read key");
+
+  cout << "key PEM" << endl;
+  cout << key_pem << endl;
+
+  string cert_pem = "";
+  err = os::ReadFile(cert_pem, cert_path);
+  assert((0 == err) && "fail to read cert");
+
+  cout << "cert PEM" << endl;
+  cout << cert_pem << endl;
+
+  grpc::SslServerCredentialsOptions::PemKeyCertPair key_cert{key_pem, cert_pem};
+
+  grpc::SslServerCredentialsOptions opts(
+      GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY);
+
+  opts.pem_key_cert_pairs.push_back(key_cert);
+
+  return grpc::SslServerCredentials(opts);
 }
