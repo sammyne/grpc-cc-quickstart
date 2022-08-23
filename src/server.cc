@@ -50,7 +50,7 @@ using helloworld::HelloRequest;
 namespace os = xiangminli::os;
 namespace experimental = grpc::experimental;
 
-shared_ptr<ServerCredentials> newCredentials(const char *key_path,
+shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
                                              const char *cert_path);
 
 // Logic and data behind the server's behavior.
@@ -78,13 +78,17 @@ int main(int argc, char **argv) {
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
   ServerBuilder builder;
 
-  auto credentials = newCredentials(key_path, cert_path);
+  auto credentials = NewCredentials(key_path, cert_path);
+  printf("5\n");
 
   // Listen on the given address without any authentication mechanism.
   builder.AddListeningPort(server_address, credentials);
+  printf("6\n");
   // Register "service" as the instance through which we'll communicate with
   // clients. In this case it corresponds to an *synchronous* service.
   builder.RegisterService(&service);
+  printf("7\n");
+  // Register "service" as the instance through which we'll communicate with
   // Finally assemble the server.
   std::unique_ptr<Server> server(builder.BuildAndStart());
   std::cout << "Server listening on " << server_address << std::endl;
@@ -96,7 +100,7 @@ int main(int argc, char **argv) {
   return 0;
 }
 
-shared_ptr<ServerCredentials> newCredentials(const char *key_path,
+shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
                                              const char *cert_path) {
   string key_pem = "";
 
@@ -113,30 +117,35 @@ shared_ptr<ServerCredentials> newCredentials(const char *key_path,
   cout << "cert PEM" << endl;
   cout << cert_pem << endl;
 
-  // v1
-  grpc::SslServerCredentialsOptions::PemKeyCertPair key_cert{key_pem, cert_pem};
-
-  grpc::SslServerCredentialsOptions opts;
-  // grpc::SslServerCredentialsOptions opts(
-  //     GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY);
-
-  opts.pem_key_cert_pairs.push_back(key_cert);
-
-  return grpc::SslServerCredentials(opts);
-
   /*
-    experimental::IdentityKeyCertPair key_cert_pair;
-    key_cert_pair.private_key = key_pem;
-    key_cert_pair.certificate_chain = cert_pem;
+    // v1
+    grpc::SslServerCredentialsOptions::PemKeyCertPair key_cert{key_pem,
+    cert_pem};
 
-    vector<experimental::IdentityKeyCertPair> key_cert_pairs{key_cert_pair};
+    grpc::SslServerCredentialsOptions opts;
+    // grpc::SslServerCredentialsOptions opts(
+    //     GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY);
 
-    auto cert_provider =
-        std::make_shared<experimental::StaticDataCertificateProvider>(
-            key_cert_pairs);
-    experimental::TlsServerCredentialsOptions opts(cert_provider);
-    opts.set_check_call_host(false);
+    opts.pem_key_cert_pairs.push_back(key_cert);
 
-    return experimental::TlsServerCredentials(opts);
+    return grpc::SslServerCredentials(opts);
     */
+
+  experimental::IdentityKeyCertPair key_cert_pair;
+  key_cert_pair.private_key = key_pem;
+  key_cert_pair.certificate_chain = cert_pem;
+
+  vector<experimental::IdentityKeyCertPair> key_cert_pairs{key_cert_pair};
+
+  printf("1\n");
+  auto cert_provider =
+      std::make_shared<experimental::StaticDataCertificateProvider>(
+          "", key_cert_pairs);
+  printf("2\n");
+  experimental::TlsServerCredentialsOptions opts(cert_provider);
+  printf("3\n");
+  opts.set_check_call_host(false);
+  printf("4\n");
+
+  return experimental::TlsServerCredentials(opts);
 }
