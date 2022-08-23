@@ -79,15 +79,12 @@ int main(int argc, char **argv) {
   ServerBuilder builder;
 
   auto credentials = NewCredentials(key_path, cert_path);
-  printf("5\n");
 
   // Listen on the given address without any authentication mechanism.
   builder.AddListeningPort(server_address, credentials);
-  printf("6\n");
   // Register "service" as the instance through which we'll communicate with
   // clients. In this case it corresponds to an *synchronous* service.
   builder.RegisterService(&service);
-  printf("7\n");
   // Register "service" as the instance through which we'll communicate with
   // Finally assemble the server.
   std::unique_ptr<Server> server(builder.BuildAndStart());
@@ -137,15 +134,11 @@ shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
 
   vector<experimental::IdentityKeyCertPair> key_cert_pairs{key_cert_pair};
 
-  printf("1\n");
   auto cert_provider =
       std::make_shared<experimental::StaticDataCertificateProvider>(
           "", key_cert_pairs);
-  printf("2\n");
   experimental::TlsServerCredentialsOptions opts(cert_provider);
-  printf("3\n");
   opts.set_check_call_host(false);
-  printf("4\n");
 
   return experimental::TlsServerCredentials(opts);
 }
