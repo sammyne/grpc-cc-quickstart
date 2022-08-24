@@ -53,7 +53,8 @@ namespace tls = xiangminli::tls;
 namespace experimental = grpc::experimental;
 
 shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
-                                             const char *cert_path);
+                                             const char *cert_path,
+                                             const char *root_ca_cert_path);
 
 // Logic and data behind the server's behavior.
 class GreeterServiceImpl final : public Greeter::Service {
@@ -78,13 +79,18 @@ int main(int argc, char **argv) {
     listening_addr = string(argv[3]);
   }
 
+  char *root_ca_cert_path = nullptr;
+  if (argc > 4) {
+    root_ca_cert_path = argv[4];
+  }
+
   GreeterServiceImpl service;
 
   grpc::EnableDefaultHealthCheckService(true);
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
   ServerBuilder builder;
 
-  auto credentials = NewCredentials(key_path, cert_path);
+  auto credentials = NewCredentials(key_path, cert_path, root_ca_cert_path);
 
   // Listen on the given address without any authentication mechanism.
   builder.AddListeningPort(listening_addr, credentials);
@@ -104,7 +110,8 @@ int main(int argc, char **argv) {
 }
 
 shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
-                                             const char *cert_path) {
+                                             const char *cert_path,
+                                             const char *root_ca_cert_path) {
   string key_pem = "";
 
   auto err = os::ReadFile(key_pem, key_path);
@@ -119,6 +126,15 @@ shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
 
   cout << "cert PEM" << endl;
   cout << cert_pem << endl;
+
+  string root_ca_cert_pem;
+  if (nullptr != root_ca_cert_path) {
+    err = os::ReadFile(root_ca_cert_pem, root_ca_cert_path);
+    assert((0 == err) && "fail to read CA cert");
+
+    cout << "root CA cert PEM" << endl;
+    cout << root_ca_cert_pem << endl;
+  }
 
   /*
     // v1
@@ -142,7 +158,7 @@ shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
 
   auto cert_provider =
       std::make_shared<experimental::StaticDataCertificateProvider>(
-          key_cert_pairs);
+          root_ca_cert_pem, key_cert_pairs);
   experimental::TlsServerCredentialsOptions opts(cert_provider);
   // opts.set_check_call_host(false);
   opts.watch_identity_key_cert_pairs();  // magic line to avoid segfault
@@ -151,8 +167,8 @@ shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
       grpc_ssl_client_certificate_request_type::
           GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY);
 
-  auto cert_verifier = tls::NewEnclaveCertVerifier(false);
-  opts.set_certificate_verifier(cert_verifier);
+  // auto cert_verifier = tls::NewEnclaveCertVerifier(false);
+  // opts.set_certificate_verifier(cert_verifier);
 
   return experimental::TlsServerCredentials(opts);
 }

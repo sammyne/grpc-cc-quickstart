@@ -46,7 +46,8 @@ namespace os = xiangminli::os;
 namespace experimental = grpc::experimental;
 
 shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
-                                              const char* cert_path);
+                                              const char* cert_path,
+                                              const char* root_ca_cert_path);
 
 class GreeterClient {
  public:
@@ -86,7 +87,9 @@ class GreeterClient {
 
 int main(int argc, char** argv) {
   if (argc < 3) {
-    cout << "[usage] key-pem-path cert-pem-path [remote-addr]" << endl;
+    cout << "[usage] key-pem-path cert-pem-path [remote-addr] "
+            "[root-ca-cert-pem-path]"
+         << endl;
     return -1;
   }
 
@@ -98,7 +101,12 @@ int main(int argc, char** argv) {
     remote_addr = string(argv[3]);
   }
 
-  auto credentials = NewCredentials(key_path, cert_path);
+  char* root_ca_cert_path = nullptr;
+  if (argc > 4) {
+    root_ca_cert_path = argv[4];
+  }
+
+  auto credentials = NewCredentials(key_path, cert_path, root_ca_cert_path);
 
   auto channel = grpc::CreateChannel(remote_addr, credentials);
 
@@ -116,7 +124,8 @@ int main(int argc, char** argv) {
 }
 
 shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
-                                              const char* cert_path) {
+                                              const char* cert_path,
+                                              const char* root_ca_cert_path) {
   string key_pem;
   auto err = os::ReadFile(key_pem, key_path);
   assert((0 == err) && "fail to read key");
@@ -131,9 +140,18 @@ shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
   cout << "cert PEM" << endl;
   cout << cert_pem << endl;
 
+  string root_ca_cert_pem;
+  if (nullptr != root_ca_cert_path) {
+    err = os::ReadFile(root_ca_cert_pem, root_ca_cert_path);
+    assert((0 == err) && "fail to read CA cert");
+
+    cout << "root CA cert PEM" << endl;
+    cout << root_ca_cert_pem << endl;
+  }
+
   grpc::experimental::TlsChannelCredentialsOptions opts;
-  opts.set_check_call_host(false);
-  opts.set_verify_server_certs(false);
+  // opts.set_check_call_host(false);
+  // opts.set_verify_server_certs(false);
 
   {
     experimental::IdentityKeyCertPair key_cert_pair;
@@ -144,7 +162,7 @@ shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
 
     auto cert_provider =
         std::make_shared<experimental::StaticDataCertificateProvider>(
-            cert_pem, key_cert_pairs);
+            root_ca_cert_pem, key_cert_pairs);
 
     opts.set_certificate_provider(cert_provider);
   }
