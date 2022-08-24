@@ -184,8 +184,7 @@ shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
   opts.pem_private_key = key_pem;
   opts.pem_cert_chain = cert_pem;
 
-  // auto out = grpc::SslCredentials(opts);
-  auto out = hack::NewSslCredentials(opts);
+  auto out = hack::NewSslCredentials(opts, hack::DummyVerifyPeer);
 
   return out;
 }

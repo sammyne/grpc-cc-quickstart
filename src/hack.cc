@@ -1,5 +1,7 @@
 #include "xiangminli/hack.h"
 
+#include <iostream>
+
 #include "grpc/grpc.h"
 #include "grpcpp/impl/codegen/grpc_library.h"
 
@@ -12,6 +14,13 @@ extern std::shared_ptr<ChannelCredentials> WrapChannelCredentials(
 
 namespace xiangminli::hack {
 
+int DummyVerifyPeer(const char* target_name, const char* peer_pem,
+                    void* userdata) {
+  printf("target-name = %s\n", target_name);
+  printf("peer cert pem\n%s\n", peer_pem);
+  return 0;
+}
+
 std::shared_ptr<grpc::ChannelCredentials> NewSslCredentials(
     const grpc::SslCredentialsOptions& options,
     const verify_peer_callback_fn verify_peer_callback) {
@@ -20,9 +29,15 @@ std::shared_ptr<grpc::ChannelCredentials> NewSslCredentials(
   grpc_ssl_pem_key_cert_pair pem_key_cert_pair = {
       options.pem_private_key.c_str(), options.pem_cert_chain.c_str()};
 
-  grpc_channel_credentials* c_creds = grpc_ssl_credentials_create(
+  const grpc_ssl_verify_peer_options opts = {
+      .verify_peer_callback = verify_peer_callback,
+      .verify_peer_callback_userdata = nullptr,
+      .verify_peer_destruct = nullptr,
+  };
+
+  grpc_channel_credentials* c_creds = grpc_ssl_credentials_create_ex(
       options.pem_root_certs.empty() ? nullptr : options.pem_root_certs.c_str(),
-      options.pem_private_key.empty() ? nullptr : &pem_key_cert_pair, nullptr,
+      options.pem_private_key.empty() ? nullptr : &pem_key_cert_pair, &opts,
       nullptr);
 
   return grpc::internal::WrapChannelCredentials(c_creds);
