@@ -18,18 +18,14 @@ link_libraries(
   ${_PROTOBUF_LIBPROTOBUF}
 )
 
-set(client_srcs 
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/client.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/os.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/tls.cc
-)
+set(src_dir ${CMAKE_CURRENT_SOURCE_DIR}/src)
 
-add_executable(client ${client_srcs} ${pb_srcs})
+file(GLOB lib_srcs ${src_dir}/*.cc)
 
-set(server_srcs 
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/server.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/os.cc
-  ${CMAKE_CURRENT_SOURCE_DIR}/src/tls.cc
-)
+add_library(dummy STATIC ${lib_srcs} ${pb_srcs})
 
-add_executable(server ${server_srcs} ${pb_srcs})
+add_executable(client ${src_dir}/bin/client.cc)
+target_link_libraries(client dummy)
+
+add_executable(server ${src_dir}/bin/server.cc)
+target_link_libraries(server dummy)

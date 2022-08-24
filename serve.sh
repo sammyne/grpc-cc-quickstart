@@ -14,6 +14,6 @@ cmake --build build --target server
 
 #./build/server $pki_dir/key.pem $pki_dir/cert.pem localhost:50051
 
-pki_dir=$workdir/pki
+pki_dir=$workdir/pki/non-self-signed
 opts="$pki_dir/server.key $pki_dir/server.crt localhost:50051 $pki_dir/ca.crt"
 ./build/server $opts

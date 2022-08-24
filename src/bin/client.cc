@@ -45,6 +45,14 @@ namespace tls = xiangminli::tls;
 namespace os = xiangminli::os;
 namespace experimental = grpc::experimental;
 
+// hack
+namespace grpc::internal {
+
+extern std::shared_ptr<ChannelCredentials> WrapChannelCredentials(
+    grpc_channel_credentials* creds);
+
+}
+
 shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
                                               const char* cert_path,
                                               const char* root_ca_cert_path);
@@ -100,6 +108,7 @@ int main(int argc, char** argv) {
   if (argc > 3) {
     remote_addr = string(argv[3]);
   }
+  printf("remote-addr = %s\n", remote_addr.c_str());
 
   char* root_ca_cert_path = nullptr;
   if (argc > 4) {
@@ -108,12 +117,12 @@ int main(int argc, char** argv) {
 
   auto credentials = NewCredentials(key_path, cert_path, root_ca_cert_path);
 
-  auto channel = grpc::CreateChannel(remote_addr, credentials);
+  // auto channel = grpc::CreateChannel(remote_addr, credentials);
 
-  // grpc::ChannelArguments channel_args;
-  // channel_args.SetSslTargetNameOverride("localhost2");
-  // auto channel =
-  //    grpc::CreateCustomChannel(remote_addr, credentials, channel_args);
+  grpc::ChannelArguments channel_args;
+  channel_args.SetSslTargetNameOverride("localhost");
+  auto channel =
+      grpc::CreateCustomChannel(remote_addr, credentials, channel_args);
 
   GreeterClient greeter(channel);
   std::string user("world");
@@ -149,33 +158,41 @@ shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
     cout << root_ca_cert_pem << endl;
   }
 
-  grpc::experimental::TlsChannelCredentialsOptions opts;
-  // opts.set_check_call_host(false);
-  // opts.set_verify_server_certs(false);
+  /*
+    grpc::experimental::TlsChannelCredentialsOptions opts;
+    // opts.set_check_call_host(false);
+    // opts.set_verify_server_certs(false);
 
-  {
-    experimental::IdentityKeyCertPair key_cert_pair;
-    key_cert_pair.private_key = key_pem;
-    key_cert_pair.certificate_chain = cert_pem;
+    {
+      experimental::IdentityKeyCertPair key_cert_pair;
+      key_cert_pair.private_key = key_pem;
+      key_cert_pair.certificate_chain = cert_pem;
 
-    vector<experimental::IdentityKeyCertPair> key_cert_pairs{key_cert_pair};
+      vector<experimental::IdentityKeyCertPair> key_cert_pairs{key_cert_pair};
 
-    auto cert_provider =
-        std::make_shared<experimental::StaticDataCertificateProvider>(
-            root_ca_cert_pem, key_cert_pairs);
+      auto cert_provider =
+          std::make_shared<experimental::StaticDataCertificateProvider>(
+              root_ca_cert_pem, key_cert_pairs);
 
-    opts.set_certificate_provider(cert_provider);
-  }
-  // opts.watch_root_certs();
+      opts.set_certificate_provider(cert_provider);
+    }
+    // opts.watch_root_certs();
 
-  auto cert_verifier = tls::NewEnclaveCertVerifier(true);
-  opts.set_certificate_verifier(cert_verifier);
+    auto cert_verifier = tls::NewEnclaveCertVerifier(true);
+    opts.set_certificate_verifier(cert_verifier);
 
-  return grpc::experimental::TlsCredentials(opts);
+    return grpc::experimental::TlsCredentials(opts);
+    */
 
-  // grpc::SslCredentialsOptions opts;
-  // opts.pem_private_key = key_pem;
-  // opts.pem_cert_chain = cert_pem;
+  // this is ok
+  grpc::SslCredentialsOptions opts;
+  opts.pem_root_certs = root_ca_cert_pem;
+  opts.pem_private_key = key_pem;
+  opts.pem_cert_chain = cert_pem;
 
-  // return grpc::SslCredentials(opts);
+  auto out = grpc::SslCredentials(opts);
+
+  auto hello = grpc::internal::WrapChannelCredentials;
+
+  return out;
 }

@@ -55,7 +55,8 @@ for app in server client; do
     -out $app.csr                  \
     -pkeyopt ec_paramgen_curve:$curve \
     -$md                              \
-    -subj "/CN=sammyne-$app"
+    -subj "/CN=sammyne-$app"          \
+    -addext "subjectAltName=DNS:localhost"
 
   echo ""
   echo "---------------------------"
