@@ -24,6 +24,7 @@
 #include "grpcpp/grpcpp.h"
 #include "grpcpp/security/tls_credentials_options.h"
 #include "helloworld.grpc.pb.h"
+#include "xiangminli/hack.h"
 #include "xiangminli/os.h"
 #include "xiangminli/tls.h"
 
@@ -42,16 +43,9 @@ using helloworld::HelloReply;
 using helloworld::HelloRequest;
 
 namespace tls = xiangminli::tls;
+namespace hack = xiangminli::hack;
 namespace os = xiangminli::os;
 namespace experimental = grpc::experimental;
-
-// hack
-namespace grpc::internal {
-
-extern std::shared_ptr<ChannelCredentials> WrapChannelCredentials(
-    grpc_channel_credentials* creds);
-
-}
 
 shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
                                               const char* cert_path,
@@ -190,9 +184,8 @@ shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
   opts.pem_private_key = key_pem;
   opts.pem_cert_chain = cert_pem;
 
-  auto out = grpc::SslCredentials(opts);
-
-  auto hello = grpc::internal::WrapChannelCredentials;
+  // auto out = grpc::SslCredentials(opts);
+  auto out = hack::NewSslCredentials(opts);
 
   return out;
 }

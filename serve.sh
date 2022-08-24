@@ -5,7 +5,7 @@ set -e
 workdir=$PWD
 pki_dir=$workdir/pki/server
 
-#cmake -B build
+cmake -B build
 
 cmake --build build --target server
 

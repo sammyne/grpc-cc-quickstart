@@ -10,7 +10,7 @@ using verify_peer_callback_fn = int (*)(const char *target_name,
                                         const char *peer_pem, void *userdata);
 
 std::shared_ptr<grpc::ChannelCredentials> NewSslCredentials(
-    const SslCredentialsOptions &options,
-    const verify_peer_callback_fn verify_peer_callback);
+    const grpc::SslCredentialsOptions &options,
+    const verify_peer_callback_fn verify_peer_callback = nullptr);
 
 }  // namespace xiangminli::hack
