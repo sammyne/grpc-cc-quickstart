@@ -56,10 +56,6 @@ namespace experimental = grpc::experimental;
 
 shared_ptr<ServerCredentials> FakeCredentials();
 
-shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
-                                             const char *cert_path,
-                                             const char *root_ca_cert_path);
-
 // Logic and data behind the server's behavior.
 class GreeterServiceImpl final : public Greeter::Service {
   Status SayHello(ServerContext *ctx, const HelloRequest *request,
@@ -89,21 +85,9 @@ class GreeterServiceImpl final : public Greeter::Service {
 };
 
 int main(int argc, char **argv) {
-  if (argc < 3) {
-    cout << "missing key-path and cert-path" << endl;
-    return -1;
-  }
-  auto key_path = argv[1];
-  auto cert_path = argv[2];
-
   string listening_addr = "0.0.0.0:50051";
-  if (argc > 3) {
-    listening_addr = string(argv[3]);
-  }
-
-  char *root_ca_cert_path = nullptr;
-  if (argc > 4) {
-    root_ca_cert_path = argv[4];
+  if (argc > 1) {
+    listening_addr = string(argv[1]);
   }
 
   GreeterServiceImpl service;
@@ -112,7 +96,6 @@ int main(int argc, char **argv) {
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
   ServerBuilder builder;
 
-  // auto credentials = NewCredentials(key_path, cert_path, root_ca_cert_path);
   auto credentials = FakeCredentials();
 
   // Listen on the given address without any authentication mechanism.
@@ -159,75 +142,6 @@ shared_ptr<ServerCredentials> FakeCredentials() {
   // opts.set_check_call_host(false);
   opts.watch_identity_key_cert_pairs();  // magic line to avoid segfault
 
-  // auto cert_req_type = grpc_ssl_client_certificate_request_type::
-  //     GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE;
-  auto cert_req_type = grpc_ssl_client_certificate_request_type::
-      GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY;
-
-  opts.set_cert_request_type(cert_req_type);
-
-  auto cert_verifier = tls::NewEnclaveCertVerifier(true);
-  opts.set_certificate_verifier(cert_verifier);
-
-  return experimental::TlsServerCredentials(opts);
-}
-
-shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
-                                             const char *cert_path,
-                                             const char *root_ca_cert_path) {
-  string key_pem = "";
-
-  auto err = os::ReadFile(key_pem, key_path);
-  assert((0 == err) && "fail to read key");
-
-  cout << "key PEM" << endl;
-  cout << key_pem << endl;
-
-  string cert_pem = "";
-  err = os::ReadFile(cert_pem, cert_path);
-  assert((0 == err) && "fail to read cert");
-
-  cout << "cert PEM" << endl;
-  cout << cert_pem << endl;
-
-  string root_ca_cert_pem;
-  if (nullptr != root_ca_cert_path) {
-    err = os::ReadFile(root_ca_cert_pem, root_ca_cert_path);
-    assert((0 == err) && "fail to read CA cert");
-
-    cout << "root CA cert PEM" << endl;
-    cout << root_ca_cert_pem << endl;
-  }
-
-  /*
-  // v1
-  // there is no custom peer verify callback available
-  grpc::SslServerCredentialsOptions::PemKeyCertPair key_cert{key_pem, cert_pem};
-
-  auto cert_req_type = grpc_ssl_client_certificate_request_type::
-      GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY;
-  grpc::SslServerCredentialsOptions opts(cert_req_type);
-
-  opts.pem_key_cert_pairs.push_back(key_cert);
-
-  return grpc::SslServerCredentials(opts);
-  */
-
-  experimental::IdentityKeyCertPair key_cert_pair;
-  key_cert_pair.private_key = key_pem;
-  key_cert_pair.certificate_chain = cert_pem;
-
-  vector<experimental::IdentityKeyCertPair> key_cert_pairs{key_cert_pair};
-
-  auto cert_provider =
-      std::make_shared<experimental::StaticDataCertificateProvider>(
-          root_ca_cert_pem, key_cert_pairs);
-  experimental::TlsServerCredentialsOptions opts(cert_provider);
-  // opts.set_check_call_host(false);
-  opts.watch_identity_key_cert_pairs();  // magic line to avoid segfault
-
-  // auto cert_req_type = grpc_ssl_client_certificate_request_type::
-  //     GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE;
   auto cert_req_type = grpc_ssl_client_certificate_request_type::
       GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY;
 
