@@ -60,7 +60,7 @@ shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
 class GreeterServiceImpl final : public Greeter::Service {
   Status SayHello(ServerContext *ctx, const HelloRequest *request,
                   HelloReply *reply) override {
-    {
+    /*{
       cout << "peer uri: " << ctx->peer() << endl;
       auto auth_ctx = ctx->auth_context();
       printf("authenticated: %d\n", auth_ctx->IsPeerAuthenticated());
@@ -76,6 +76,7 @@ class GreeterServiceImpl final : public Greeter::Service {
         cout << v.first << ": " << v.second << endl;
       }
     }
+    */
 
     std::string prefix("Hello ");
     reply->set_message(prefix + request->name());
@@ -154,18 +155,18 @@ shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
   }
 
   /*
-    // v1
-    grpc::SslServerCredentialsOptions::PemKeyCertPair key_cert{key_pem,
-    cert_pem};
+  // v1
+  // there is no custom peer verify callback available
+  grpc::SslServerCredentialsOptions::PemKeyCertPair key_cert{key_pem, cert_pem};
 
-    grpc::SslServerCredentialsOptions opts;
-    // grpc::SslServerCredentialsOptions opts(
-    //     GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_AND_VERIFY);
+  auto cert_req_type = grpc_ssl_client_certificate_request_type::
+      GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY;
+  grpc::SslServerCredentialsOptions opts(cert_req_type);
 
-    opts.pem_key_cert_pairs.push_back(key_cert);
+  opts.pem_key_cert_pairs.push_back(key_cert);
 
-    return grpc::SslServerCredentials(opts);
-    */
+  return grpc::SslServerCredentials(opts);
+  */
 
   experimental::IdentityKeyCertPair key_cert_pair;
   key_cert_pair.private_key = key_pem;
