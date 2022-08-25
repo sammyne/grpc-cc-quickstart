@@ -146,6 +146,7 @@ int FakeKeyAndSignedCertFromCA(crypto::PrivateKey &privkey_,
       std::make_pair<int, string>(NID_key_usage,
                                   "critical,digitalSignature,keyEncipherment"),
       std::make_pair<int, string>(NID_subject_key_identifier, "hash"),
+      std::make_pair<int, string>(NID_authority_key_identifier, "keyid:always"),
   };
   if (auto err =
           internal::AddExtensionsToCert(cert.get(), extensions, ca_cert)) {
