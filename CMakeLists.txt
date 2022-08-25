@@ -28,7 +28,7 @@ link_libraries(
 
 #aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src srcs)
 file(GLOB_RECURSE srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/**.cc)
-message(STATUS "srcs: ${srcs}")
+#message(STATUS "srcs: ${srcs}")
 
 add_library(dummy STATIC ${srcs} ${pb_srcs})
 

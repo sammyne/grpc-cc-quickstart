@@ -135,7 +135,7 @@ int main(int argc, char** argv) {
 shared_ptr<ChannelCredentials> FakeCredentials() {
   string key_pem, cert_pem;
   auto err = faker::FakeEncodedKeyAndSignedCertFromCA(key_pem, cert_pem);
-  assert((0 == err) && "fak encoded key and cert");
+  assert((0 == err) && "fake encoded key and cert");
 
   cout << "key PEM" << endl;
   cout << key_pem << "\n" << endl;
