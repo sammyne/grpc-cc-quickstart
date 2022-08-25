@@ -30,6 +30,7 @@
 #include "grpcpp/security/tls_certificate_provider.h"
 #include "grpcpp/security/tls_credentials_options.h"
 #include "helloworld.grpc.pb.h"
+#include "xiangminli/faker.h"
 #include "xiangminli/os.h"
 #include "xiangminli/tls.h"
 
@@ -49,8 +50,11 @@ using helloworld::HelloReply;
 using helloworld::HelloRequest;
 
 namespace os = xiangminli::os;
+namespace faker = xiangminli::faker;
 namespace tls = xiangminli::tls;
 namespace experimental = grpc::experimental;
+
+shared_ptr<ServerCredentials> FakeCredentials();
 
 shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
                                              const char *cert_path,
@@ -108,7 +112,8 @@ int main(int argc, char **argv) {
   grpc::reflection::InitProtoReflectionServerBuilderPlugin();
   ServerBuilder builder;
 
-  auto credentials = NewCredentials(key_path, cert_path, root_ca_cert_path);
+  // auto credentials = NewCredentials(key_path, cert_path, root_ca_cert_path);
+  auto credentials = FakeCredentials();
 
   // Listen on the given address without any authentication mechanism.
   builder.AddListeningPort(listening_addr, credentials);
@@ -125,6 +130,46 @@ int main(int argc, char **argv) {
   server->Wait();
 
   return 0;
+}
+
+shared_ptr<ServerCredentials> FakeCredentials() {
+  string key_pem, cert_pem;
+  auto err = faker::FakeEncodedKeyAndSignedCertFromCA(key_pem, cert_pem);
+  assert((0 == err) && "fake encoded key and cert");
+
+  cout << "key PEM" << endl;
+  cout << key_pem << "\n" << endl;
+
+  cout << "cert PEM" << endl;
+  cout << cert_pem << "\n" << endl;
+
+  cout << "CA cert PEM" << endl;
+  cout << faker::kCACertPEM << "\n" << endl;
+
+  experimental::IdentityKeyCertPair key_cert_pair;
+  key_cert_pair.private_key = key_pem;
+  key_cert_pair.certificate_chain = cert_pem;
+
+  vector<experimental::IdentityKeyCertPair> key_cert_pairs{key_cert_pair};
+
+  auto cert_provider =
+      std::make_shared<experimental::StaticDataCertificateProvider>(
+          faker::kCACertPEM, key_cert_pairs);
+  experimental::TlsServerCredentialsOptions opts(cert_provider);
+  // opts.set_check_call_host(false);
+  opts.watch_identity_key_cert_pairs();  // magic line to avoid segfault
+
+  // auto cert_req_type = grpc_ssl_client_certificate_request_type::
+  //     GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE;
+  auto cert_req_type = grpc_ssl_client_certificate_request_type::
+      GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY;
+
+  opts.set_cert_request_type(cert_req_type);
+
+  auto cert_verifier = tls::NewEnclaveCertVerifier(true);
+  opts.set_certificate_verifier(cert_verifier);
+
+  return experimental::TlsServerCredentials(opts);
 }
 
 shared_ptr<ServerCredentials> NewCredentials(const char *key_path,

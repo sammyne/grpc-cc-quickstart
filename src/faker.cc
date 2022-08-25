@@ -136,9 +136,9 @@ int FakeKeyAndSignedCertFromCA(crypto::PrivateKey &privkey_,
 
   {
     auto issuer = X509_get_subject_name(ca_cert);
-    auto issuer_str = X509_NAME_oneline(issuer, nullptr, 0);
-    printf("issuer = %s\n", issuer_str);
-    OPENSSL_free(issuer_str);
+    // auto issuer_str = X509_NAME_oneline(issuer, nullptr, 0);
+    // printf("issuer = %s\n", issuer_str);
+    // OPENSSL_free(issuer_str);
     X509_set_issuer_name(cert.get(), issuer);
   }
 
@@ -147,6 +147,8 @@ int FakeKeyAndSignedCertFromCA(crypto::PrivateKey &privkey_,
                                   "critical,digitalSignature,keyEncipherment"),
       std::make_pair<int, string>(NID_subject_key_identifier, "hash"),
       std::make_pair<int, string>(NID_authority_key_identifier, "keyid:always"),
+      std::make_pair<int, string>(NID_subject_alt_name,
+                                  "DNS:localhost,DNS:127.0.0.1,DNS:0.0.0.0"),
   };
   if (auto err =
           internal::AddExtensionsToCert(cert.get(), extensions, ca_cert)) {
