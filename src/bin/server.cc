@@ -180,10 +180,10 @@ shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
   // opts.set_check_call_host(false);
   opts.watch_identity_key_cert_pairs();  // magic line to avoid segfault
 
-  auto cert_req_type = grpc_ssl_client_certificate_request_type::
-      GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE;
   // auto cert_req_type = grpc_ssl_client_certificate_request_type::
-  //     GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY;
+  //     GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE;
+  auto cert_req_type = grpc_ssl_client_certificate_request_type::
+      GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY;
 
   opts.set_cert_request_type(cert_req_type);
 

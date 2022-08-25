@@ -3,8 +3,8 @@
 set -e
 
 workdir=$PWD
-#pki_dir=$workdir/pki/non-self-signed
-pki_dir=$workdir/pki/self-signed
+pki_dir=$workdir/pki/non-self-signed
+#pki_dir=$workdir/pki/self-signed
 
 cmake -B build
 
@@ -17,6 +17,6 @@ export GRPC_VERBOSITY=TRACE
 
 #./build/server $pki_dir/key.pem $pki_dir/cert.pem localhost:50051
 
-#opts="$pki_dir/server.key $pki_dir/server.crt localhost:50051 $pki_dir/ca.crt"
-opts="$pki_dir/server.key $pki_dir/server.crt localhost:50051"
+opts="$pki_dir/server.key $pki_dir/server.crt localhost:50051 $pki_dir/ca.crt"
+#opts="$pki_dir/server.key $pki_dir/server.crt localhost:50051"
 ./build/server $opts

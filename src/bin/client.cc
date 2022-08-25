@@ -153,6 +153,7 @@ shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
     cout << root_ca_cert_pem << endl;
   }
 
+  /*
   grpc::experimental::TlsChannelCredentialsOptions opts;
   // opts.set_check_call_host(false);
   opts.set_verify_server_certs(false);
@@ -176,18 +177,17 @@ shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
   opts.set_certificate_verifier(cert_verifier);
 
   return grpc::experimental::TlsCredentials(opts);
+  */
 
-  /*
-   // this is ok
-   grpc::SslCredentialsOptions opts;
-   opts.pem_root_certs = "";
-   opts.pem_private_key = key_pem;
-   opts.pem_cert_chain = cert_pem;
+  // this is ok
+  grpc::SslCredentialsOptions opts;
+  opts.pem_root_certs = root_ca_cert_pem;
+  opts.pem_private_key = key_pem;
+  opts.pem_cert_chain = cert_pem;
 
-   auto out = hack::NewSslCredentials(opts, hack::DummyVerifyPeer);
+  auto out = hack::NewSslCredentials(opts, hack::DummyVerifyPeer);
 
-   return out;
-   */
+  return out;
 
   // return grpc::InsecureChannelCredentials();
 }
