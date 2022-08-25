@@ -8,7 +8,15 @@ set(pb_dir ${CMAKE_CURRENT_SOURCE_DIR}/proto)
 
 include(cmake/grpc.cmake)
 
-include_directories(${pb_dir} ${CMAKE_CURRENT_SOURCE_DIR}/include)
+#set(OPENSSL_USE_STATIC_LIBS TRUE)
+#find_package(OpenSSL REQUIRED)
+#message(STATUS "openssl version: ${OPENSSL_VERSION}")
+
+include_directories(
+  ${pb_dir}
+  ${OPENSSL_INCLUDE_DIR}
+  ${CMAKE_CURRENT_SOURCE_DIR}/include
+)
 
 aux_source_directory(${pb_dir} pb_srcs)
 
@@ -18,15 +26,13 @@ link_libraries(
   ${_PROTOBUF_LIBPROTOBUF}
 )
 
-set(src_dir ${CMAKE_CURRENT_SOURCE_DIR}/src)
+#aux_source_directory(${CMAKE_CURRENT_SOURCE_DIR}/src srcs)
+file(GLOB_RECURSE srcs ${CMAKE_CURRENT_SOURCE_DIR}/src/**.cc)
+message(STATUS "srcs: ${srcs}")
 
-file(GLOB lib_srcs ${src_dir}/*.cc)
-#message(STATUS "${lib_srcs}")
+add_library(dummy STATIC ${srcs} ${pb_srcs})
 
-add_library(dummy STATIC ${lib_srcs} ${pb_srcs})
-
-add_executable(client ${src_dir}/bin/client.cc)
-target_link_libraries(client dummy)
-
-add_executable(server ${src_dir}/bin/server.cc)
-target_link_libraries(server dummy)
+foreach(app client server)
+  add_executable(${app} ${CMAKE_CURRENT_SOURCE_DIR}/apps/${app}.cc)
+  target_link_libraries(${app} dummy ${OPENSSL_CRYPTO_LIBRARY})
+endforeach(app )

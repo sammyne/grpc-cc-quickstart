@@ -2,6 +2,7 @@
 
 ## Environment
 - sammyne/grpc-cc:1.48.0-ubuntu20.04
+- libssl-dev 1.1.1f
 
 ## Quickstart
 

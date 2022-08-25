@@ -24,6 +24,7 @@
 #include "grpcpp/grpcpp.h"
 #include "grpcpp/security/tls_credentials_options.h"
 #include "helloworld.grpc.pb.h"
+#include "xiangminli/faker.h"
 #include "xiangminli/hack.h"
 #include "xiangminli/os.h"
 #include "xiangminli/tls.h"
@@ -43,9 +44,12 @@ using helloworld::HelloReply;
 using helloworld::HelloRequest;
 
 namespace tls = xiangminli::tls;
+namespace faker = xiangminli::faker;
 namespace hack = xiangminli::hack;
 namespace os = xiangminli::os;
 namespace experimental = grpc::experimental;
+
+shared_ptr<ChannelCredentials> FakeCredentials();
 
 shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
                                               const char* cert_path,
@@ -109,7 +113,8 @@ int main(int argc, char** argv) {
     root_ca_cert_path = argv[4];
   }
 
-  auto credentials = NewCredentials(key_path, cert_path, root_ca_cert_path);
+  // auto credentials = NewCredentials(key_path, cert_path, root_ca_cert_path);
+  auto credentials = FakeCredentials();
 
   // auto channel = grpc::CreateChannel(remote_addr, credentials);
 
@@ -125,6 +130,28 @@ int main(int argc, char** argv) {
   std::cout << "Greeter received: " << reply << std::endl;
 
   return 0;
+}
+
+shared_ptr<ChannelCredentials> FakeCredentials() {
+  string key_pem, cert_pem;
+  auto err = faker::FakeEncodedKeyAndSignedCertFromCA(key_pem, cert_pem);
+  assert((0 == err) && "fak encoded key and cert");
+
+  cout << "key PEM" << endl;
+  cout << key_pem << "\n" << endl;
+
+  cout << "cert PEM" << endl;
+  cout << cert_pem << "\n" << endl;
+
+  cout << "CA cert PEM" << endl;
+  cout << faker::kCACertPEM << "\n" << endl;
+
+  grpc::SslCredentialsOptions opts;
+  opts.pem_root_certs = faker::kCACertPEM;
+  opts.pem_private_key = key_pem;
+  opts.pem_cert_chain = cert_pem;
+
+  return hack::NewSslCredentials(opts, hack::DummyVerifyPeer);
 }
 
 shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
