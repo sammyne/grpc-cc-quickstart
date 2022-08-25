@@ -58,8 +58,25 @@ shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
 
 // Logic and data behind the server's behavior.
 class GreeterServiceImpl final : public Greeter::Service {
-  Status SayHello(ServerContext *context, const HelloRequest *request,
+  Status SayHello(ServerContext *ctx, const HelloRequest *request,
                   HelloReply *reply) override {
+    {
+      cout << "peer uri: " << ctx->peer() << endl;
+      auto auth_ctx = ctx->auth_context();
+      printf("authenticated: %d\n", auth_ctx->IsPeerAuthenticated());
+      for (const auto &v : auth_ctx->GetPeerIdentity()) {
+        cout << "peer id: " << v << endl;
+      }
+      // printf()
+      cout << "id prop name: " << auth_ctx->GetPeerIdentityPropertyName()
+           << endl;
+
+      for (auto i = auth_ctx->begin(); i != auth_ctx->end(); i++) {
+        auto v = *i;
+        cout << v.first << ": " << v.second << endl;
+      }
+    }
+
     std::string prefix("Hello ");
     reply->set_message(prefix + request->name());
     return Status::OK;
@@ -163,12 +180,15 @@ shared_ptr<ServerCredentials> NewCredentials(const char *key_path,
   // opts.set_check_call_host(false);
   opts.watch_identity_key_cert_pairs();  // magic line to avoid segfault
 
-  opts.set_cert_request_type(
-      grpc_ssl_client_certificate_request_type::
-          GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY);
+  auto cert_req_type = grpc_ssl_client_certificate_request_type::
+      GRPC_SSL_DONT_REQUEST_CLIENT_CERTIFICATE;
+  // auto cert_req_type = grpc_ssl_client_certificate_request_type::
+  //     GRPC_SSL_REQUEST_AND_REQUIRE_CLIENT_CERTIFICATE_BUT_DONT_VERIFY;
 
-  // auto cert_verifier = tls::NewEnclaveCertVerifier(false);
-  // opts.set_certificate_verifier(cert_verifier);
+  opts.set_cert_request_type(cert_req_type);
+
+  auto cert_verifier = tls::NewEnclaveCertVerifier(true);
+  opts.set_certificate_verifier(cert_verifier);
 
   return experimental::TlsServerCredentials(opts);
 }

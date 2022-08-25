@@ -22,6 +22,8 @@ bool EnclaveCertVerifier::Verify(TlsCustomVerificationCheckRequest *request,
   printf("hello from xml\n");
   cout << "peer cert PEM" << endl;
   cout << request->peer_cert() << endl;
+  cout << "peer cert chain PEM" << endl;
+  cout << request->peer_cert_full_chain() << endl;
   cout << "target name = " << request->target_name() << endl;
 
   if (this->for_debug_) {

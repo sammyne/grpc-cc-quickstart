@@ -68,10 +68,10 @@ class GreeterClient {
 
     // Context for the client. It could be used to convey extra information to
     // the server and/or tweak certain RPC behaviors.
-    ClientContext context;
+    ClientContext ctx;
 
     // The actual RPC.
-    Status status = stub_->SayHello(&context, request, &reply);
+    Status status = stub_->SayHello(&ctx, request, &reply);
 
     // Act upon its status.
     if (status.ok()) {
@@ -115,6 +115,7 @@ int main(int argc, char** argv) {
 
   grpc::ChannelArguments channel_args;
   channel_args.SetSslTargetNameOverride("localhost");
+  channel_args.SetString("GRPC_TLS_SKIP_ALL_SERVER_VERIFICATION", "1");
   auto channel =
       grpc::CreateCustomChannel(remote_addr, credentials, channel_args);
 
@@ -152,39 +153,41 @@ shared_ptr<ChannelCredentials> NewCredentials(const char* key_path,
     cout << root_ca_cert_pem << endl;
   }
 
+  grpc::experimental::TlsChannelCredentialsOptions opts;
+  // opts.set_check_call_host(false);
+  opts.set_verify_server_certs(false);
+
+  {
+    experimental::IdentityKeyCertPair key_cert_pair;
+    key_cert_pair.private_key = key_pem;
+    key_cert_pair.certificate_chain = cert_pem;
+
+    vector<experimental::IdentityKeyCertPair> key_cert_pairs{key_cert_pair};
+
+    auto cert_provider =
+        std::make_shared<experimental::StaticDataCertificateProvider>(
+            cert_pem, key_cert_pairs);
+
+    opts.set_certificate_provider(cert_provider);
+  }
+  // opts.watch_root_certs();
+
+  auto cert_verifier = tls::NewEnclaveCertVerifier(true);
+  opts.set_certificate_verifier(cert_verifier);
+
+  return grpc::experimental::TlsCredentials(opts);
+
   /*
-    grpc::experimental::TlsChannelCredentialsOptions opts;
-    // opts.set_check_call_host(false);
-    // opts.set_verify_server_certs(false);
+   // this is ok
+   grpc::SslCredentialsOptions opts;
+   opts.pem_root_certs = "";
+   opts.pem_private_key = key_pem;
+   opts.pem_cert_chain = cert_pem;
 
-    {
-      experimental::IdentityKeyCertPair key_cert_pair;
-      key_cert_pair.private_key = key_pem;
-      key_cert_pair.certificate_chain = cert_pem;
+   auto out = hack::NewSslCredentials(opts, hack::DummyVerifyPeer);
 
-      vector<experimental::IdentityKeyCertPair> key_cert_pairs{key_cert_pair};
+   return out;
+   */
 
-      auto cert_provider =
-          std::make_shared<experimental::StaticDataCertificateProvider>(
-              root_ca_cert_pem, key_cert_pairs);
-
-      opts.set_certificate_provider(cert_provider);
-    }
-    // opts.watch_root_certs();
-
-    auto cert_verifier = tls::NewEnclaveCertVerifier(true);
-    opts.set_certificate_verifier(cert_verifier);
-
-    return grpc::experimental::TlsCredentials(opts);
-    */
-
-  // this is ok
-  grpc::SslCredentialsOptions opts;
-  opts.pem_root_certs = root_ca_cert_pem;
-  opts.pem_private_key = key_pem;
-  opts.pem_cert_chain = cert_pem;
-
-  auto out = hack::NewSslCredentials(opts, hack::DummyVerifyPeer);
-
-  return out;
+  // return grpc::InsecureChannelCredentials();
 }
